@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OnDemand Proxy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+:root, [data-theme="light"]{
+  --bg:#f5f5f7;
+  --surface:#ffffff;
+  --surface-2:#fbfbfd;
+  --border:#e5e5ea;
+  --border-strong:#d2d2d7;
+  --text:#1d1d1f;
+  --text-2:#6e6e73;
+  --text-3:#86868b;
+  --accent:#0071e3;
+  --accent-hover:#0077ed;
+  --accent-soft:#e8f1fd;
+  --success:#34c759;
+  --success-soft:#e8f7ec;
+  --danger:#ff3b30;
+  --danger-soft:#ffeceb;
+  --purple:#5e5ce6;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.04);
+  --shadow:0 4px 16px rgba(0,0,0,.06);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.08);
+  --login-grad:linear-gradient(180deg,#f5f5f7 0%,#eaeaef 100%);
+}
+[data-theme="dark"]{
+  --bg:#0a0a0c;
+  --surface:#1c1c1e;
+  --surface-2:#2a2a2d;
+  --border:#2e2e32;
+  --border-strong:#3a3a3f;
+  --text:#f5f5f7;
+  --text-2:#a1a1a6;
+  --text-3:#6e6e73;
+  --accent:#0a84ff;
+  --accent-hover:#409cff;
+  --accent-soft:rgba(10,132,255,.15);
+  --success:#30d158;
+  --success-soft:rgba(48,209,88,.15);
+  --danger:#ff453a;
+  --danger-soft:rgba(255,69,58,.15);
+  --purple:#7d7aff;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 4px 16px rgba(0,0,0,.4);
+  --shadow-lg:0 12px 40px rgba(0,0,0,.5);
+  --login-grad:linear-gradient(180deg,#0a0a0c 0%,#1c1c1e 100%);
+}
+body{transition:background-color .25s,color .25s}
+.card,.stat,.sidebar,.login-box,textarea,input,.api-info code,.model-chip,.btn-outline{transition:background-color .25s,border-color .25s,color .25s}
+
+/* Theme toggle */
+.theme-toggle{
+  position:fixed;top:20px;right:24px;z-index:100;
+  width:38px;height:38px;border-radius:50%;
+  background:var(--surface);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;color:var(--text-2);
+  box-shadow:var(--shadow-sm);transition:all .2s;
+}
+.theme-toggle:hover{color:var(--text);transform:rotate(15deg);box-shadow:var(--shadow)}
+.theme-toggle svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme-toggle .icon-sun{display:none}
+.theme-toggle .icon-moon{display:block}
+[data-theme="dark"] .theme-toggle .icon-sun{display:block}
+[data-theme="dark"] .theme-toggle .icon-moon{display:none}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','SF Pro Text','PingFang SC','Helvetica Neue',Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  font-size:14px;
+  line-height:1.5;
+  letter-spacing:-0.01em;
+}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+input,textarea{font-family:inherit}
+
+/* ===== Login ===== */
+.login-wrap{
+  display:flex;align-items:center;justify-content:center;min-height:100vh;
+  background:linear-gradient(180deg,#f5f5f7 0%,#eaeaef 100%);
+  padding:20px;
+}
+.login-box{
+  background:var(--surface);
+  border-radius:18px;
+  padding:40px 36px 32px;
+  width:380px;
+  box-shadow:var(--shadow-lg);
+}
+.login-box .brand{text-align:center;margin-bottom:28px}
+.login-box .brand .logo-mark{
+  width:52px;height:52px;border-radius:14px;
+  background:linear-gradient(135deg,#0071e3 0%,#5e5ce6 100%);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 14px;color:#fff;font-size:24px;font-weight:600;
+  box-shadow:0 8px 20px rgba(0,113,227,.25);
+}
+.login-box h2{font-size:22px;color:var(--text);font-weight:600;letter-spacing:-0.02em}
+.login-box .sub{font-size:13px;color:var(--text-2);margin-top:4px}
+.login-box input{
+  width:100%;padding:12px 16px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:15px;outline:none;margin-bottom:14px;
+  transition:all .15s;
+}
+.login-box input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px var(--accent-soft)}
+.login-box button{
+  width:100%;padding:12px;background:var(--accent);color:#fff;border:none;
+  border-radius:10px;font-size:15px;cursor:pointer;font-weight:500;
+  transition:all .15s;
+}
+.login-box button:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,113,227,.25)}
+.login-box button:active{transform:translateY(0)}
+
+/* ===== Layout ===== */
+.app{display:flex;min-height:100vh}
+.sidebar{
+  width:240px;background:var(--surface);
+  border-right:1px solid var(--border);
+  padding:24px 0;flex-shrink:0;
+  position:sticky;top:0;height:100vh;
+  display:flex;flex-direction:column;
+}
+.sidebar .logo{padding:0 24px 22px;margin-bottom:8px}
+.sidebar .logo-row{display:flex;align-items:center;gap:10px}
+.sidebar .logo-mark{
+  width:32px;height:32px;border-radius:9px;
+  background:linear-gradient(135deg,#0071e3 0%,#5e5ce6 100%);
+  display:flex;align-items:center;justify-content:center;
+  color:#fff;font-size:16px;font-weight:600;
+  box-shadow:0 4px 10px rgba(0,113,227,.2);
+}
+.sidebar .logo h2{font-size:15px;color:var(--text);font-weight:600;letter-spacing:-0.01em}
+.sidebar .logo p{font-size:11px;color:var(--text-3);margin-top:1px}
+.nav{padding:0 10px}
+.nav-item{
+  display:flex;align-items:center;gap:11px;
+  padding:9px 14px;font-size:14px;color:var(--text-2);
+  cursor:pointer;border-radius:8px;margin-bottom:2px;
+  transition:all .12s;font-weight:500;
+}
+.nav-item:hover{background:var(--surface-2);color:var(--text)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent)}
+.nav-item .icon{
+  width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.nav-item.active .icon svg{stroke:var(--accent)}
+.nav-item .icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.6}
+
+.sidebar-footer{
+  margin-top:auto;padding:14px 20px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;
+}
+.sidebar-footer .dot{width:8px;height:8px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px var(--success-soft)}
+.sidebar-footer .info{font-size:12px;color:var(--text-2);line-height:1.3}
+.sidebar-footer #keyCountFooter{color:var(--text);font-weight:600}
+
+.main{flex:1;padding:40px 48px;max-width:1100px}
+.page-title{font-size:28px;color:var(--text);margin-bottom:6px;font-weight:600;letter-spacing:-0.025em}
+.page-desc{color:var(--text-2);font-size:14px;margin-bottom:28px}
+
+/* ===== Card ===== */
+.card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:24px;margin-bottom:18px;
+  box-shadow:var(--shadow-sm);
+}
+.card h3{
+  font-size:15px;margin-bottom:14px;
+  color:var(--text);font-weight:600;letter-spacing:-0.01em;
+}
+.card .desc{color:var(--text-2);font-size:13px;margin-bottom:16px;line-height:1.55}
+.card .desc code{
+  background:var(--surface-2);padding:2px 7px;border-radius:5px;
+  font-family:'SF Mono',Menlo,monospace;font-size:12px;color:var(--purple);
+}
+
+/* ===== Inputs ===== */
+textarea{
+  width:100%;min-height:130px;padding:14px;
+  background:var(--surface-2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);font-size:13px;
+  font-family:'SF Mono',Menlo,monospace;outline:none;resize:vertical;
+  transition:all .15s;line-height:1.5;
+}
+textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px var(--accent-soft)}
+textarea::placeholder{color:var(--text-3)}
+
+/* ===== Buttons ===== */
+.btn{
+  padding:9px 20px;border:none;border-radius:10px;
+  font-size:14px;cursor:pointer;font-weight:500;
+  transition:all .12s;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;
+}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-hover);transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,113,227,.22)}
+.btn-primary:active{transform:translateY(0)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#e0352b;transform:translateY(-1px)}
+.btn-sm{padding:6px 14px;font-size:12.5px;border-radius:8px}
+.btn-outline{background:var(--surface);border:1px solid var(--border-strong);color:var(--text)}
+.btn-outline:hover{background:var(--surface-2);border-color:var(--text-3)}
+.actions{display:flex;gap:8px;margin-top:14px}
+
+/* ===== Table ===== */
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:14px 12px;font-size:13.5px}
+th{
+  color:var(--text-3);font-weight:500;
+  border-bottom:1px solid var(--border);
+  font-size:12px;text-transform:uppercase;letter-spacing:0.04em;
+}
+td{border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--surface-2)}
+.key-text{font-family:'SF Mono',Menlo,monospace;color:var(--purple);font-size:13px}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:6px;font-size:12px;font-weight:500;
+}
+.badge::before{content:'';width:6px;height:6px;border-radius:50%}
+.badge-active{background:var(--success-soft);color:#17793c}
+.badge-active::before{background:var(--success)}
+.badge-inactive{background:var(--danger-soft);color:#c73730}
+.badge-inactive::before{background:var(--danger)}
+.usage{color:var(--accent);font-weight:600;font-variant-numeric:tabular-nums}
+.empty{text-align:center;padding:48px 20px;color:var(--text-3);font-size:14px}
+
+/* ===== Toast ===== */
+.toast{
+  position:fixed;top:24px;right:24px;
+  background:rgba(29,29,31,.92);backdrop-filter:saturate(180%) blur(20px);
+  -webkit-backdrop-filter:saturate(180%) blur(20px);
+  color:#fff;padding:13px 22px;border-radius:12px;font-size:14px;font-weight:500;
+  opacity:0;transform:translateY(-10px);
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+  z-index:999;pointer-events:none;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.error{background:rgba(255,59,48,.95);color:#fff}
+
+/* ===== API Info ===== */
+.api-info{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.api-info:last-child{margin-bottom:0}
+.api-info .label{font-size:13px;color:var(--text-2);width:96px;flex-shrink:0;font-weight:500}
+.api-info code{
+  flex:1;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:8px;padding:10px 14px;font-size:13px;
+  color:var(--purple);font-family:'SF Mono',Menlo,monospace;
+  word-break:break-all;
+}
+.api-info .copy-btn{
+  padding:9px 16px;background:var(--surface);
+  color:var(--text);border:1px solid var(--border-strong);
+  border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;
+  white-space:nowrap;transition:all .12s;
+}
+.api-info .copy-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ===== Models ===== */
+.model-group{margin-bottom:26px}
+.model-group:last-child{margin-bottom:0}
+.model-group h4{
+  font-size:11px;color:var(--text-3);
+  text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px;
+  display:flex;align-items:center;gap:9px;font-weight:600;
+}
+.model-group h4::before{
+  content:'';display:inline-block;width:4px;height:14px;
+  background:linear-gradient(180deg,var(--accent),var(--purple));
+  border-radius:2px;
+}
+.model-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.model-chip{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:12px 16px;
+  display:flex;align-items:center;justify-content:space-between;
+  cursor:pointer;transition:all .15s;
+}
+.model-chip:hover{
+  border-color:var(--accent);background:var(--accent-soft);
+  transform:translateY(-1px);box-shadow:var(--shadow);
+}
+.model-chip .name{font-family:'SF Mono',Menlo,monospace;color:var(--text);font-size:13px;font-weight:500}
+.model-chip:hover .name{color:var(--accent)}
+.model-chip .copy-hint{
+  font-size:11px;color:var(--text-3);opacity:0;transition:opacity .15s;
+}
+.model-chip:hover .copy-hint{opacity:1;color:var(--accent)}
+
+/* ===== Password ===== */
+.pw-row{display:flex;gap:10px;align-items:center;max-width:520px}
+.pw-row input{
+  flex:1;padding:11px 14px;background:var(--surface-2);
+  border:1px solid var(--border);border-radius:10px;
+  color:var(--text);font-size:14px;outline:none;transition:all .15s;
+}
+.pw-row input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 4px var(--accent-soft)}
+
+/* ===== Section ===== */
+.section{display:none}
+.section.active{display:block;animation:fadeIn .25s cubic-bezier(.4,0,.2,1)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.hidden{display:none !important}
+
+/* ===== Stat cards ===== */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px}
+.stat{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:14px;padding:22px 22px 20px;
+  box-shadow:var(--shadow-sm);transition:all .2s;
+}
+.stat:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.stat .label{font-size:13px;color:var(--text-2);margin-bottom:8px;font-weight:500}
+.stat .value{font-size:30px;color:var(--text);font-weight:600;letter-spacing:-0.02em;font-variant-numeric:tabular-nums}
+.stat .value.accent{color:var(--accent)}
+.stat .value.green{color:#17793c}
+.stat .value.purple{color:var(--purple)}
+
+/* ===== Responsive ===== */
+@media(max-width:880px){
+  .sidebar{width:64px}
+  .sidebar .logo p,.nav-item span:not(.icon),.sidebar .logo h2,.sidebar-footer .info{display:none}
+  .sidebar .logo{padding:0 16px 22px;justify-content:center}
+  .sidebar .logo-row{justify-content:center}
+  .nav-item{justify-content:center;padding:11px}
+  .sidebar-footer{justify-content:center;padding:14px}
+  .main{padding:24px}
+  .api-info{flex-wrap:wrap}
+  .api-info .label{width:100%}
+}
+</style>
+</head>
+<body>
+
+<button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+  <svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/></svg>
+  <svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+</button>
+
+<div id="loginPage" class="login-wrap">
+  <div class="login-box">
+    <div class="brand">
+      <div class="logo-mark">O</div>
+      <h2>OnDemand Proxy</h2>
+      <div class="sub">OpenAI 兼容代理 · 管理面板</div>
+    </div>
+    <input type="password" id="pwInput" placeholder="管理密码" onkeydown="if(event.key==='Enter')doLogin()">
+    <button onclick="doLogin()">登 录</button>
+  </div>
+</div>
+
+<div id="mainPage" class="app hidden">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-row">
+        <div class="logo-mark">O</div>
+        <div>
+          <h2>OnDemand</h2>
+          <p>OpenAI 兼容代理</p>
+        </div>
+      </div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" data-section="overview" onclick="switchTo('overview')">
+        <span class="icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg></span>
+        <span>概览</span>
+      </div>
+      <div class="nav-item" data-section="api" onclick="switchTo('api')">
+        <span class="icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 11 21 7 17 3"/><polyline points="7 13 3 17 7 21"/><line x1="21" y1="7" x2="9" y2="7"/><line x1="3" y1="17" x2="15" y2="17"/></svg></span>
+        <span>接入信息</span>
+      </div>
+      <div class="nav-item" data-section="keys" onclick="switchTo('keys')">
+        <span class="icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><line x1="10.85" y1="12.15" x2="19" y2="4"/><line x1="18" y1="5" x2="20" y2="7"/><line x1="15" y1="8" x2="17" y2="10"/></svg></span>
+        <span>Key 管理</span>
+      </div>
+      <div class="nav-item" data-section="models" onclick="switchTo('models')">
+        <span class="icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/><line x1="2" y1="15.5" x2="12" y2="8.5"/><line x1="22" y1="15.5" x2="12" y2="8.5"/></svg></span>
+        <span>模型列表</span>
+      </div>
+      <div class="nav-item" data-section="settings" onclick="switchTo('settings')">
+        <span class="icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
+        <span>修改密码</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="dot"></div>
+      <div class="info">
+        <div><span id="keyCountFooter">0 / 0</span></div>
+        <div>活跃 Key</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- Overview -->
+    <div class="section active" id="section-overview">
+      <h1 class="page-title">概览</h1>
+      <p class="page-desc">系统运行状态与快速接入信息</p>
+      <div class="stat-grid">
+        <div class="stat">
+          <div class="label">活跃 Key</div>
+          <div class="value green" id="statActive">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">总 Key 数</div>
+          <div class="value" id="statTotal">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">总调用次数</div>
+          <div class="value accent" id="statUsage">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">支持模型</div>
+          <div class="value purple" id="statModels">0</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>快速接入</h3>
+        <p class="desc">把下面的 Base URL 填到 New API 或任何 OpenAI 兼容客户端里。调用方的 API Key 随便填即可，本代理不校验。</p>
+        <div class="api-info">
+          <span class="label">Base URL</span>
+          <code id="apiBaseOv"></code>
+          <button class="copy-btn" onclick="copyText('apiBaseOv')">复制</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Info -->
+    <div class="section" id="section-api">
+      <h1 class="page-title">接入信息</h1>
+      <p class="page-desc">在 New API 或其他 OpenAI 兼容客户端中填入以下地址</p>
+
+      <div class="card">
+        <h3>API 地址</h3>
+        <div class="api-info">
+          <span class="label">Base URL</span>
+          <code id="apiBase"></code>
+          <button class="copy-btn" onclick="copyText('apiBase')">复制</button>
+        </div>
+        <div class="api-info">
+          <span class="label">Chat 接口</span>
+          <code id="apiUrl"></code>
+          <button class="copy-btn" onclick="copyText('apiUrl')">复制</button>
+        </div>
+        <div class="api-info">
+          <span class="label">模型列表</span>
+          <code id="apiModels"></code>
+          <button class="copy-btn" onclick="copyText('apiModels')">复制</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>调用方 API Key</h3>
+        <p class="desc">本代理 <strong>不校验</strong> 调用方的 API Key，New API 那边随便填一个即可，例如 <code>sk-anything</code>。真正用于上游 on-demand.io 的 Key 在「Key 管理」里维护。</p>
+      </div>
+    </div>
+
+    <!-- Keys -->
+    <div class="section" id="section-keys">
+      <h1 class="page-title">Key 管理</h1>
+      <p class="page-desc">导入和管理 on-demand.io 的 API Key，代理会自动轮询调用</p>
+
+      <div class="card">
+        <h3>导入 Key</h3>
+        <p class="desc">每行一个 Key，会自动去重</p>
+        <textarea id="keyInput" placeholder="粘贴 API Key，每行一个..."></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="importKeys()">导入</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Key 列表 <span id="keyCount" style="font-weight:400;font-size:13px;color:var(--text-3);margin-left:10px"></span></h3>
+        <div id="keyTable"></div>
+      </div>
+    </div>
+
+    <!-- Models -->
+    <div class="section" id="section-models">
+      <h1 class="page-title">支持的模型</h1>
+      <p class="page-desc">点击任意模型卡片可复制模型名</p>
+      <div class="card">
+        <div id="modelsList"></div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div class="section" id="section-settings">
+      <h1 class="page-title">修改管理密码</h1>
+      <p class="page-desc">修改后下次登录需要使用新密码</p>
+      <div class="card">
+        <h3>新密码</h3>
+        <p class="desc">至少 4 位字符</p>
+        <div class="pw-row">
+          <input type="password" id="newPwInput" placeholder="输入新密码">
+          <button class="btn btn-primary" onclick="changePassword()">修改密码</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = '';
+
+const MODEL_GROUPS = [
+  { name: 'Claude', ids: ['claude-4-8-opus','claude-4-6-opus','claude-sonnet-4-6','claude-haiku-4-5'] },
+  { name: 'OpenAI GPT', ids: ['gpt-4.1','gpt-4.1-mini','gpt-4.1-nano','gpt-4o','gpt-4o-mini'] },
+  { name: 'OpenAI o 系列', ids: ['o3','o3-mini','o4-mini'] },
+  { name: 'Google Gemini', ids: ['gemini-2.5-pro','gemini-2.5-flash'] },
+  { name: 'DeepSeek', ids: ['deepseek-v4-pro','deepseek-r1','deepseek-v3'] },
+  { name: '智谱 GLM', ids: ['glm-5.2'] },
+];
+
+function toast(msg, isError) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  setTimeout(() => t.className = 'toast', 2200);
+}
+
+function copyText(elId) {
+  const text = document.getElementById(elId).textContent;
+  navigator.clipboard.writeText(text).then(() => toast('已复制'));
+}
+
+function copyModel(name) {
+  navigator.clipboard.writeText(name).then(() => toast('已复制 ' + name));
+}
+
+function switchTo(section) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelector(`.nav-item[data-section="${section}"]`).classList.add('active');
+  document.querySelectorAll('.section').forEach(el => el.classList.remove('active'));
+  document.getElementById(`section-${section}`).classList.add('active');
+}
+
+async function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  try {
+    const r = await fetch(API + '/admin/api/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    if (!r.ok) { toast('密码错误', true); return; }
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('mainPage').classList.remove('hidden');
+    loadApiInfo();
+    loadKeys();
+    loadModels();
+  } catch(e) { toast('连接失败', true); }
+}
+
+function loadApiInfo() {
+  const base = window.location.origin;
+  document.getElementById('apiUrl').textContent = base + '/v1/chat/completions';
+  document.getElementById('apiBase').textContent = base + '/v1';
+  document.getElementById('apiModels').textContent = base + '/v1/models';
+  document.getElementById('apiBaseOv').textContent = base + '/v1';
+}
+
+async function apiFetch(url, opts = {}) {
+  opts.credentials = 'same-origin';
+  const r = await fetch(API + url, opts);
+  if (r.status === 401) {
+    document.getElementById('loginPage').classList.remove('hidden');
+    document.getElementById('mainPage').classList.add('hidden');
+    toast('登录已过期', true);
+    throw new Error('Unauthorized');
+  }
+  return r;
+}
+
+function maskKey(k) {
+  if (k.length <= 8) return k;
+  return k.slice(0, 4) + '••••' + k.slice(-4);
+}
+
+async function loadKeys() {
+  const r = await apiFetch('/admin/api/keys');
+  const keys = await r.json();
+  const active = keys.filter(k => k.active).length;
+  const totalUsage = keys.reduce((s, k) => s + (k.usage || 0), 0);
+  document.getElementById('keyCount').textContent = `${active} 个活跃 · 共 ${keys.length} 个`;
+  document.getElementById('keyCountFooter').textContent = `${active} / ${keys.length}`;
+  document.getElementById('statActive').textContent = active;
+  document.getElementById('statTotal').textContent = keys.length;
+  document.getElementById('statUsage').textContent = totalUsage;
+
+  if (!keys.length) {
+    document.getElementById('keyTable').innerHTML = '<div class="empty">暂无 Key，请在上方导入</div>';
+    return;
+  }
+  let html = '<table><tr><th>Key</th><th>状态</th><th>调用次数</th><th style="text-align:right">操作</th></tr>';
+  for (const k of keys) {
+    html += `<tr>
+      <td class="key-text">${maskKey(k.key)}</td>
+      <td><span class="badge ${k.active ? 'badge-active' : 'badge-inactive'}">${k.active ? '启用' : '禁用'}</span></td>
+      <td class="usage">${k.usage || 0}</td>
+      <td style="text-align:right">
+        <button class="btn btn-outline btn-sm" onclick="toggleKey('${k.id}', ${!k.active})">${k.active ? '禁用' : '启用'}</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">删除</button>
+      </td>
+    </tr>`;
+  }
+  html += '</table>';
+  document.getElementById('keyTable').innerHTML = html;
+}
+
+async function importKeys() {
+  const raw = document.getElementById('keyInput').value.trim();
+  if (!raw) return;
+  const keys = raw.split('\n').map(l => l.trim()).filter(Boolean);
+  const r = await apiFetch('/admin/api/keys', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({keys})
+  });
+  const d = await r.json();
+  toast(`已添加 ${d.added} 个 Key（共 ${d.total} 个）`);
+  document.getElementById('keyInput').value = '';
+  loadKeys();
+}
+
+async function deleteKey(id) {
+  if (!confirm('确定删除这个 Key？')) return;
+  await apiFetch(`/admin/api/keys/${id}`, {method: 'DELETE'});
+  toast('已删除');
+  loadKeys();
+}
+
+async function toggleKey(id, active) {
+  await apiFetch(`/admin/api/keys/${id}`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({active})
+  });
+  loadKeys();
+}
+
+async function loadModels() {
+  const r = await fetch(API + '/v1/models');
+  const d = await r.json();
+  const available = new Set(d.data.map(m => m.id));
+  document.getElementById('statModels').textContent = available.size;
+  const el = document.getElementById('modelsList');
+  let html = '';
+  for (const group of MODEL_GROUPS) {
+    const visible = group.ids.filter(id => available.has(id));
+    if (!visible.length) continue;
+    html += `<div class="model-group"><h4>${group.name}</h4><div class="model-grid">`;
+    for (const id of visible) {
+      html += `<div class="model-chip" onclick="copyModel('${id}')">
+        <span class="name">${id}</span>
+        <span class="copy-hint">复制</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  const grouped = new Set(MODEL_GROUPS.flatMap(g => g.ids));
+  const others = [...available].filter(id => !grouped.has(id));
+  if (others.length) {
+    html += `<div class="model-group"><h4>其他</h4><div class="model-grid">`;
+    for (const id of others) {
+      html += `<div class="model-chip" onclick="copyModel('${id}')">
+        <span class="name">${id}</span>
+        <span class="copy-hint">复制</span>
+      </div>`;
+    }
+    html += `</div></div>`;
+  }
+  el.innerHTML = html;
+}
+
+async function changePassword() {
+  const newPw = document.getElementById('newPwInput').value.trim();
+  if (!newPw) { toast('请输入新密码', true); return; }
+  if (newPw.length < 4) { toast('密码至少 4 位', true); return; }
+  const r = await apiFetch('/admin/api/password', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({password: newPw})
+  });
+  if (r.ok) {
+    toast('密码已修改');
+    document.getElementById('newPwInput').value = '';
+  } else {
+    toast('修改失败', true);
+  }
+}
+</script>
+<script>
+function toggleTheme(){
+  const d=document.documentElement;
+  const t=d.getAttribute('data-theme')==='dark'?'light':'dark';
+  d.setAttribute('data-theme',t);
+  localStorage.setItem('theme',t);
+}
+(function(){
+  const t=localStorage.getItem('theme')||(window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+  document.documentElement.setAttribute('data-theme',t);
+})();
+</script>
+</body>
+</html>
