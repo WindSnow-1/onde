@@ -22,6 +22,7 @@ MODEL_MAP = {
     "claude-4-6-opus": "predefined-claude-4-6-opus",
     "claude-sonnet-4-6": "predefined-claude-sonnet-4-6",
     "claude-haiku-4-5": "predefined-claude-haiku-4-5",
+    "claude-fable-5": "predefined-claude-fable-5",
     "gpt-4.1": "predefined-openai-gpt4.1",
     "gpt-4.1-mini": "predefined-openai-gpt4.1-mini",
     "gpt-4.1-nano": "predefined-openai-gpt4.1-nano",
