@@ -122,7 +122,7 @@ def resolve_endpoint(model):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
-        pass
+        print(fmt % args)
 
     def _read_body(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -243,19 +243,23 @@ class Handler(BaseHTTPRequestHandler):
         self._send_json({"ok": True}, cookie=f"admin_password={new_pw}; HttpOnly; Max-Age=604800; Path=/")
 
     def _handle_add_keys(self):
-        body = self._json_body()
-        raw_keys = body.get("keys", [])
-        keys = load_keys()
-        existing = {k["key"] for k in keys}
-        added = 0
-        for k in raw_keys:
-            k = k.strip()
-            if k and k not in existing:
-                keys.append({"id": uuid.uuid4().hex[:12], "key": k, "active": True, "usage": 0})
-                existing.add(k)
-                added += 1
-        save_keys(keys)
-        self._send_json({"added": added, "total": len(keys)})
+        try:
+            body = self._json_body()
+            raw_keys = body.get("keys", [])
+            keys = load_keys()
+            existing = {k["key"] for k in keys}
+            added = 0
+            for k in raw_keys:
+                k = k.strip()
+                if k and k not in existing:
+                    keys.append({"id": uuid.uuid4().hex[:12], "key": k, "active": True, "usage": 0})
+                    existing.add(k)
+                    added += 1
+            save_keys(keys)
+            self._send_json({"added": added, "total": len(keys)})
+        except Exception as e:
+            print(f"Error adding keys: {e}")
+            self._send_error(500, str(e))
 
     def _handle_chat(self):
         body = self._json_body()
