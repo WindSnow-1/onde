@@ -44,7 +44,10 @@ _key_lock = threading.Lock()
 
 def load_config():
     if CONFIG_FILE.exists():
-        return json.loads(CONFIG_FILE.read_text())
+        raw = CONFIG_FILE.read_bytes()
+        if raw[:3] == b'\xef\xbb\xbf':
+            raw = raw[3:]
+        return json.loads(raw)
     return {"admin_password": os.environ.get("ADMIN_PASSWORD", "admin123")}
 
 def save_config(cfg):
@@ -53,7 +56,10 @@ def save_config(cfg):
 def load_keys():
     if not KEYS_FILE.exists():
         return []
-    return json.loads(KEYS_FILE.read_text())
+    raw = KEYS_FILE.read_bytes()
+    if raw[:3] == b'\xef\xbb\xbf':
+        raw = raw[3:]
+    return json.loads(raw)
 
 def save_keys(keys):
     KEYS_FILE.write_text(json.dumps(keys, indent=2))
